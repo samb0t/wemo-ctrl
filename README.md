@@ -9,3 +9,4 @@
     - Move to one config
 - [ ] Exceptions for browser window titles
     - Skip if it's Firefox, etc.
+- [ ] Support discovery?

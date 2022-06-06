@@ -3,7 +3,7 @@ sh ./SetBinaryStateOff.sh
 echo 0 > cache.txt
 
 while true; do
-    if wmctrl -l | grep -i ringcentral; then
+    if wmctrl -l | grep -i 'Zoom Meeting$\|Zoom$'; then
         if [ $(cat cache.txt) -eq 0 ]; then
             sh ./SetBinaryStateOn.sh
             echo "meeting in progress"

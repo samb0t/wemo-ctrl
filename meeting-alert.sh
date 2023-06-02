@@ -1,8 +1,20 @@
 #!/bin/bash
+# requires sudo now
+
+remove_local_route () {
+    if [[ $(ip route | grep "192.168.1\.0.*via") ]]; then
+        ip route del $(ip route | grep "192.168.1\.0.*via")
+        echo "removed local ip route"
+    fi
+}
+
+remove_local_route
+
 sh ./SetBinaryStateOff.sh
 echo 0 > cache.txt
 
 while true; do
+    remove_local_route
     if wmctrl -l | grep -i 'Zoom Meeting$\|Zoom$\|Zoom Webinar$'; then
         if [ $(cat cache.txt) -eq 0 ]; then
             sh ./SetBinaryStateOn.sh

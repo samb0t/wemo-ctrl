@@ -23,8 +23,12 @@ while true; do
 
     if [[ -z "$zoom_windows" ]]; then
         echo "No meeting"
+        if [ $(cat cache.txt) -eq 1 ]; then
+            sh ./SetBinaryStateOff.sh
+            echo "no meeting in progress"
+            echo 0 > cache.txt
+        fi
     else
-
         if echo "$zoom_windows" | grep -E "Webinar|Meeting"; then
             if [ $(cat cache.txt) -eq 0 ]; then
                 sh ./SetBinaryStateOn.sh

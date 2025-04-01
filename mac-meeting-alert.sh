@@ -10,6 +10,8 @@
 
 # remove_local_route
 
+export ADDRESS="192.168.1.46:49154"
+
 sh ./SetBinaryStateOff.sh
 echo 0 > cache.txt
 

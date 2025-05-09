@@ -9,8 +9,24 @@
 # }
 
 # remove_local_route
+targets=(
+    "192.168.1.46:49154"
+    "192.168.1.46:49153"
+)
 
-export ADDRESS="192.168.1.46:49154"
+for target in "${targets[@]}"; do
+    curl http://$target/upnp/control/basicevent1
+    result=$?
+    if [ $result -ne 0 ]; then
+        echo "Failed to connect to $target"
+    else
+        echo "Connected to $target"
+        export ADDRESS=$target
+        break
+    fi
+done
+
+#export ADDRESS="192.168.1.46:49154"
 
 sh ./SetBinaryStateOff.sh
 echo 0 > cache.txt

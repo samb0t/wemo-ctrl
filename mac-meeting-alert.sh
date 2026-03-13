@@ -14,16 +14,21 @@ targets=(
     "192.168.1.46:49153"
 )
 
-for target in "${targets[@]}"; do
-    curl http://$target/upnp/control/basicevent1
-    result=$?
-    if [ $result -ne 0 ]; then
-        echo "Failed to connect to $target"
-    else
-        echo "Connected to $target"
-        export ADDRESS=$target
-        break
-    fi
+# keep trying in case we are still plugging in
+while true; do
+    for target in "${targets[@]}"; do
+        curl http://$target/upnp/control/basicevent1
+        result=$?
+        if [ $result -ne 0 ]; then
+            echo "Failed to connect to $target"
+        else
+            echo "Connected to $target"
+            export ADDRESS=$target
+            break 2
+        fi
+    done
+    echo "Unable to connect; retrying"
+    sleep 2
 done
 
 #export ADDRESS="192.168.1.46:49154"
@@ -38,6 +43,8 @@ while true; do
         on error
             return ""
         end try')
+
+    echo $zoom_windows
 
     if [[ -z "$zoom_windows" ]]; then
         echo "No meeting"

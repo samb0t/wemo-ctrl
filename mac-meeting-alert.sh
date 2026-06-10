@@ -1,74 +1,66 @@
 #!/bin/bash
-# requires sudo now
+# mac-meeting-alert.sh
+#
+# Polls Zoom for active meetings and toggles a WeMo switch accordingly.
+# Handles sleep/wake and port changes by re-discovering the WeMo endpoint
+# automatically whenever a SOAP call fails.
 
-# remove_local_route () {
-#     if [[ $(ip route | grep "192.168.1\.0.*via") ]]; then
-#         ip route del $(ip route | grep "192.168.1\.0.*via")
-#         echo "removed local ip route"
-#     fi
-# }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=wemo-lib.sh
+source "${SCRIPT_DIR}/wemo-lib.sh"
 
-# remove_local_route
-targets=(
-    "192.168.1.46:49154"
-    "192.168.1.46:49153"
-)
+CACHE_FILE="${SCRIPT_DIR}/cache.txt"
+POLL_INTERVAL=5
 
-# keep trying in case we are still plugging in
-while true; do
-    for target in "${targets[@]}"; do
-        curl http://$target/upnp/control/basicevent1
-        result=$?
-        if [ $result -ne 0 ]; then
-            echo "Failed to connect to $target"
-        else
-            echo "Connected to $target"
-            export ADDRESS=$target
-            break 2
-        fi
-    done
-    echo "Unable to connect; retrying"
-    sleep 2
-done
+# ---- Startup -------------------------------------------------------------
 
-#export ADDRESS="192.168.1.46:49154"
+wait_for_wemo
 
-sh ./SetBinaryStateOff.sh
-echo 0 > cache.txt
+if set_wemo_state off; then
+    echo 0 > "$CACHE_FILE"
+else
+    echo "Warning: could not initialize switch state" >&2
+    echo 0 > "$CACHE_FILE"
+fi
+
+# ---- Main loop -----------------------------------------------------------
 
 while true; do
-#    remove_local_route
     zoom_windows=$(osascript -e 'try
         tell application "System Events" to get name of every window of process "zoom.us"
         on error
             return ""
         end try')
 
-    echo $zoom_windows
+    echo "$zoom_windows"
 
-    if [[ -z "$zoom_windows" ]]; then
-        echo "No meeting"
-        if [ $(cat cache.txt) -eq 1 ]; then
-            sh ./SetBinaryStateOff.sh
-            echo "no meeting in progress"
-            echo 0 > cache.txt
+    cached=$(cat "$CACHE_FILE")
+
+    in_meeting=0
+    if [[ -n "$zoom_windows" ]] && echo "$zoom_windows" | grep -qE "Webinar|Meeting"; then
+        in_meeting=1
+    fi
+
+    if (( in_meeting == 1 )); then
+        if (( cached == 0 )); then
+            if set_wemo_state on; then
+                echo "Meeting started -- switch on"
+                echo 1 > "$CACHE_FILE"
+            else
+                echo "Could not turn switch on; will retry" >&2
+            fi
         fi
     else
-        if echo "$zoom_windows" | grep -E "Webinar|Meeting"; then
-            if [ $(cat cache.txt) -eq 0 ]; then
-                sh ./SetBinaryStateOn.sh
-                echo "meeting in progress"
-                echo 1 > cache.txt
-            fi
-        else
-            echo "No meeting"
-            echo "$zoom_windows"
-            if [ $(cat cache.txt) -eq 1 ]; then
-                sh ./SetBinaryStateOff.sh
-                echo "no meeting in progress"
-                echo 0 > cache.txt
+        echo "No meeting"
+        if (( cached == 1 )); then
+            if set_wemo_state off; then
+                echo "Meeting ended -- switch off"
+                echo 0 > "$CACHE_FILE"
+            else
+                echo "Could not turn switch off; will retry" >&2
             fi
         fi
     fi
-    sleep 5
+
+    sleep "$POLL_INTERVAL"
 done

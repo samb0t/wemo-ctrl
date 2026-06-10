@@ -1,4 +1,7 @@
 #!/bin/bash
-curl --header "Content-Type: text/xml;charset=UTF-8" \
-     --header "SOAPAction:\"urn:Belkin:service:basicevent:1#SetBinaryState\"" \
-     --data @SetBinaryStateOff.xml http://$ADDRESS/upnp/control/basicevent1 -v 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=wemo-lib.sh
+source "${SCRIPT_DIR}/wemo-lib.sh"
+
+wait_for_wemo
+set_wemo_state off
